@@ -185,6 +185,9 @@ def zad3() -> None:
 def zad4() -> None:
     plot = Plot(ncols=2, nrows=2)
 
+    class_names = ['Setosa', 'Versicolour', 'Virginica']
+    labels = ['sepal_length_in_cm', 'sepal_width_in_cm', 'petal_length_in_cm', 'petal_width_in_cm']
+
     # pozyskanie danych
     df = pd.read_csv('../odczyt_probek/iris.txt', delimiter=r'\s+', header=None)
     class_1 = df[df[4] == 1].values.tolist()
@@ -193,42 +196,42 @@ def zad4() -> None:
 
 
     # komórka 0-0
-    plot.set_title('3 i 4 atrybut')
-    plot.set_xlabel('3 atrybut')
-    plot.set_ylabel('4 atrybut')
-    plot.draw_points([x[2] for x in class_1], [y[3] for y in class_1], 'klasa 1')
-    plot.draw_points([x[2] for x in class_2], [y[3] for y in class_2], 'klasa 2')
-    plot.draw_points([x[2] for x in class_3], [y[3] for y in class_3], 'klasa 3')
+    plot.set_title(f'{labels[2]} & {labels[3]}')
+    plot.set_xlabel(labels[2])
+    plot.set_ylabel(labels[3])
+    plot.draw_points([x[2] for x in class_1], [y[3] for y in class_1], class_names[0])
+    plot.draw_points([x[2] for x in class_2], [y[3] for y in class_2], class_names[1])
+    plot.draw_points([x[2] for x in class_3], [y[3] for y in class_3], class_names[2])
     plot.set_legend()
 
     # komórka 0-1
     plot.swap_subplot(0, 1)
-    plot.set_title('2 i 4 atrybut')
-    plot.set_xlabel('2 atrybut')
-    plot.set_ylabel('4 atrybut')
-    plot.draw_points([x[1] for x in class_1], [y[3] for y in class_1], 'klasa 1')
-    plot.draw_points([x[1] for x in class_2], [y[3] for y in class_2], 'klasa 2')
-    plot.draw_points([x[1] for x in class_3], [y[3] for y in class_3], 'klasa 3')
+    plot.set_title(f'{labels[1]} & {labels[3]}')
+    plot.set_xlabel(labels[0])
+    plot.set_ylabel(labels[3])
+    plot.draw_points([x[1] for x in class_1], [y[3] for y in class_1], class_names[0])
+    plot.draw_points([x[1] for x in class_2], [y[3] for y in class_2], class_names[1])
+    plot.draw_points([x[1] for x in class_3], [y[3] for y in class_3], class_names[2])
     plot.set_legend()
 
     # komórka 1-0
     plot.swap_subplot(1, 0)
-    plot.set_title('1 i 4 atrybut')
-    plot.set_xlabel('1 atrybut')
-    plot.set_ylabel('4 atrybut')
-    plot.draw_points([x[0] for x in class_1], [y[3] for y in class_1], 'klasa 1')
-    plot.draw_points([x[0] for x in class_2], [y[3] for y in class_2], 'klasa 2')
-    plot.draw_points([x[0] for x in class_3], [y[3] for y in class_3], 'klasa 3')
+    plot.set_title(f'{labels[0]} & {labels[3]}')
+    plot.set_xlabel(labels[0])
+    plot.set_ylabel(labels[3])
+    plot.draw_points([x[0] for x in class_1], [y[3] for y in class_1], class_names[0])
+    plot.draw_points([x[0] for x in class_2], [y[3] for y in class_2], class_names[1])
+    plot.draw_points([x[0] for x in class_3], [y[3] for y in class_3], class_names[2])
     plot.set_legend()
 
     # komórka 1-1
     plot.swap_subplot(1, 1)
-    plot.set_title('2 i 3 atrybut')
-    plot.set_xlabel('2 atrybut')
-    plot.set_ylabel('3 atrybut')
-    plot.draw_points([x[1] for x in class_1], [y[2] for y in class_1], 'klasa 1')
-    plot.draw_points([x[1] for x in class_2], [y[2] for y in class_2], 'klasa 2')
-    plot.draw_points([x[1] for x in class_3], [y[2] for y in class_3], 'klasa 3')
+    plot.set_title(f'{labels[1]} & {labels[2]}')
+    plot.set_xlabel(labels[1])
+    plot.set_ylabel(labels[2])
+    plot.draw_points([x[1] for x in class_1], [y[2] for y in class_1], class_names[0])
+    plot.draw_points([x[1] for x in class_2], [y[2] for y in class_2], class_names[1])
+    plot.draw_points([x[1] for x in class_3], [y[2] for y in class_3], class_names[2])
     plot.set_legend()
 
     plot.show()

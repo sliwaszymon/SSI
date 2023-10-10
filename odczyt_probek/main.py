@@ -3,7 +3,7 @@ import pandas as pd
 
 class Dataset:
     def __init__(self, file_name):
-        self.df = pd.read_csv(f'odczyt_probek/{file_name}', delimiter=r'\s+', header=None)
+        self.df = pd.read_csv(file_name, delimiter=r'\s+', header=None)
 
     def get_value(self, row: int, col: int) -> float | int:
         return self.df[col][row]

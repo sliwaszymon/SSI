@@ -66,7 +66,7 @@ class KMeans:
         plt.legend()
         plt.show()
 
-    def __call__(self, visualize=False) -> None:
+    def __call__(self, visualize: bool = False) -> None:
 
         self.initialize_centroids()
 
@@ -160,7 +160,7 @@ class FuzzyCMeans:
         plt.legend()
         plt.show()
 
-    def __call__(self, visualize=False) -> None:
+    def __call__(self, visualize: bool = False) -> None:
         self.initialize_centroids()
 
         for _ in range(self.max_iterations):

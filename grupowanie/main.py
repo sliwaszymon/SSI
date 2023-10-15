@@ -37,7 +37,7 @@ class Data:
                 data.append(line.split())
         self.data = self.probki_str_na_liczby(data)
 
-    def get_data(self):
+    def get_data(self) -> list[list[float]]:
         return self.data
 
 
@@ -99,18 +99,19 @@ class FuzzyCMeans:
     centroids: np.ndarray
     membership: np.ndarray
 
-    def __init__(self, data: list[list[float]], k: int, m: int, max_iterations: int = 100, tolerance: float = 1e-4):
+    def __init__(self, data: list[list[float]], k: int,
+                 m: int, max_iterations: int = 100, tolerance: float = 1e-4) -> None:
         self.data = np.array(data)
         self.k = k
         self.m = m
         self.max_iterations = max_iterations
         self.tolerance = tolerance
 
-    def initialize_centroids(self):
+    def initialize_centroids(self) -> None:
         initial_indices = np.random.choice(range(len(self.data)), self.k, replace=False)
         self.centroids = self.data[initial_indices]
 
-    def assign_clusters(self):
+    def assign_clusters(self) -> None:
         num_clusters = len(self.centroids)
         num_points = len(self.data)
 
@@ -129,7 +130,7 @@ class FuzzyCMeans:
 
         self.membership = membership
 
-    def update_centroids(self):
+    def update_centroids(self) -> None:
         num_clusters = self.membership.shape[1]
         num_points = self.membership.shape[0]
 
@@ -143,7 +144,7 @@ class FuzzyCMeans:
         if np.linalg.norm(new_centroids - self.centroids) > self.tolerance:
             self.centroids = new_centroids
 
-    def visualize(self):
+    def visualize(self) -> None:
         colors = ['r', 'g', 'b', 'c', 'm', 'y']
         plt.figure(figsize=(8, 6))
 
@@ -159,7 +160,7 @@ class FuzzyCMeans:
         plt.legend()
         plt.show()
 
-    def __call__(self, visualize=False):
+    def __call__(self, visualize=False) -> None:
         self.initialize_centroids()
 
         for _ in range(self.max_iterations):
@@ -169,10 +170,10 @@ class FuzzyCMeans:
         if visualize:
             self.visualize()
 
-    def get_centroids(self):
+    def get_centroids(self) -> np.ndarray:
         return self.centroids
 
-    def get_membership(self):
+    def get_membership(self) -> np.ndarray:
         return self.membership
 
 
@@ -205,9 +206,9 @@ def zad3() -> None:
 
 
 def main() -> None:
-    zad1() # wczytywanie próbek
-    zad2() # k-means
-    zad3() # fuzzy_c_means
+    zad1()  # wczytywanie próbek
+    zad2()  # k-means
+    zad3()  # fuzzy_c_means
 
 
 if __name__ == '__main__':

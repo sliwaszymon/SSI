@@ -141,7 +141,7 @@ class Plot:
             self.ax.set_xticks(np.arange(-100, 100, ticks))
             self.ax.set_yticks(np.arange(-100, 100, ticks))
 
-    def set_legend(self, loc: str = 'upper left', title: str = '', fontsize: str = 'small'):
+    def set_legend(self, loc: str = 'upper left', title: str = '', fontsize: str = 'small') -> None:
         if self.multiplot:
             self.ax[self.x_ax, self.y_ax].legend(loc=loc, title=title, fontsize=fontsize)
         else:
@@ -193,7 +193,6 @@ def zad4() -> None:
     class_1 = df[df[4] == 1].values.tolist()
     class_2 = df[df[4] == 2].values.tolist()
     class_3 = df[df[4] == 3].values.tolist()
-
 
     # komórka 0-0
     plot.set_title(f'{labels[2]} & {labels[3]}')

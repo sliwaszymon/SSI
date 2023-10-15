@@ -2,6 +2,8 @@ import pandas as pd
 
 
 class Dataset:
+    df: pd.DataFrame
+
     def __init__(self, file_name):
         self.df = pd.read_csv(file_name, delimiter=r'\s+', header=None)
 

@@ -2,138 +2,156 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def probki_str_na_liczby(probki_str: list[list[str]], numery_atr: list[int]) -> list[list[float]]:
-    ans = []
+class Data:
+    data: list[list[float]]
 
-    for row in probki_str:
-        part_ans = []
-        for idx, col in enumerate(row):
-            if idx in numery_atr:
-                try:
-                    parsed = float(col)
-                    part_ans.append(parsed)
-                except ValueError as e:
-                    # obsługa wyjątki poczas próby parsowania ze str na float jeżeli col nie jest liczbą
-                    print(f'Error: {e}')
-        ans.append(part_ans)
+    @staticmethod
+    def probki_str_na_liczby(probki_str: list[list[str]], numery_atr: list[int] = None) -> list[list[float]]:
+        if numery_atr is None:
+            numery_atr = [x for x in range(len(probki_str))]
 
-    for idx in range(len(ans)-1):
-        # obsługa wyjątku różnicy długości wierszy macierzy danych
-        if len(ans[idx]) != len(ans[idx+1]):
-            print('Error: Rows has different length!')
-            break
+        ans = []
 
-    return ans
+        for row in probki_str:
+            part_ans = []
+            for idx, col in enumerate(row):
+                if idx in numery_atr:
+                    try:
+                        parsed = float(col)
+                        part_ans.append(parsed)
+                    except ValueError as e:
+                        print(f'Error: {e}')
+            ans.append(part_ans)
+
+        for idx in range(len(ans) - 1):
+            if len(ans[idx]) != len(ans[idx + 1]):
+                print('Error: Rows has different length!')
+                break
+
+        return ans
+
+    def read_data(self, filename: str) -> None:
+        data = []
+        with open(filename, 'r') as f:
+            for line in f:
+                data.append(line.split())
+        self.data = self.probki_str_na_liczby(data)
+
+    def get_data(self):
+        return self.data
 
 
-def read_data(filename: str) -> list[list[str]]:
-    data = []
-    with open(filename, 'r') as f:
-        for line in f:
-            data.append(line.split())
-    return data
+class KMeans:
+    data: np.ndarray
+    k: int
+    max_iterations: int
+    centroids: np.ndarray
+    membership: np.ndarray
 
+    def __init__(self, data: list[list[float]], k: int, max_iterations: int = 100) -> None:
+        self.data = np.array(data)
+        self.k = k
+        self.max_iterations = max_iterations
 
-def initialize_centroids(data: np.ndarray, k: int) -> np.ndarray:
-    # Randomowo wybiera k wierszy z data
-    initial_indices = np.random.choice(range(len(data)), k, replace=False)
-    centroids = data[initial_indices]
-    return centroids
+    def initialize_centroids(self) -> None:
+        initial_indices = np.random.choice(range(len(self.data)), self.k, replace=False)
+        self.centroids = self.data[initial_indices]
 
-
-def k_means(data: list[list[float]], k: int, max_iterations: int = 100,
-            visualize: bool = False) -> tuple[np.ndarray, np.ndarray]:
-    data = np.array(data)
-
-    centroids, cluster_assignments = initialize_centroids(data, k), None
-
-    for _ in range(max_iterations):
-        # Przypisanie danych do najbliższych grup wg. punktów centralnych
-        distances = np.linalg.norm(data[:, np.newaxis] - centroids, axis=2)
-        cluster_assignments = np.argmin(distances, axis=1)
-
-        # Nowe punkty centralne
-        new_centroids = np.array([data[cluster_assignments == k].mean(axis=0) for k in range(k)])
-
-        # sprawdzanie zbieżności starych punktów centralnych z nowymi (optymalizacja)
-        if np.all(centroids == new_centroids):
-            break
-
-        centroids = new_centroids
-
-    if visualize:
-        for x in range(k):
-            plt.scatter(data[cluster_assignments == x][:, 0], data[cluster_assignments == x][:, 1],
+    def visualize(self) -> None:
+        for x in range(self.k):
+            plt.scatter(self.data[self.membership == x][:, 0], self.data[self.membership == x][:, 1],
                         label=f'Cluster {x + 1}')
 
-        plt.scatter(centroids[:, 0], centroids[:, 1], c='red', marker='x', s=100, label='Centroids')
+        plt.scatter(self.centroids[:, 0], self.centroids[:, 1], c='red', marker='x', s=100, label='Centroids')
         plt.legend()
         plt.show()
 
-    return cluster_assignments, centroids
+    def __call__(self, visualize=False) -> None:
+
+        self.initialize_centroids()
+
+        for _ in range(self.max_iterations):
+            distances = np.linalg.norm(self.data[:, np.newaxis] - self.centroids, axis=2)
+            self.membership = np.argmin(distances, axis=1)
+
+            new_centroids = np.array([self.data[self.membership == k].mean(axis=0) for k in range(self.k)])
+            if np.all(self.centroids == new_centroids):
+                break
+
+            self.centroids = new_centroids
+
+        if visualize:
+            self.visualize()
+
+    def get_centroids(self) -> np.ndarray:
+        return self.centroids
+
+    def get_membership(self) -> np.ndarray:
+        return self.membership
 
 
-def assign_clusters(data: np.ndarray, centroids: np.ndarray, m: int) -> np.ndarray:
-    num_clusters = len(centroids)
-    num_points = len(data)
+class FuzzyCMeans:
+    data: np.ndarray
+    k: int
+    m: int
+    max_iterations: int
+    tolerance: float
+    centroids: np.ndarray
+    membership: np.ndarray
 
-    # Initialize the membership matrix
-    membership = np.zeros((num_points, num_clusters))
+    def __init__(self, data: list[list[float]], k: int, m: int, max_iterations: int = 100, tolerance: float = 1e-4):
+        self.data = np.array(data)
+        self.k = k
+        self.m = m
+        self.max_iterations = max_iterations
+        self.tolerance = tolerance
 
-    for i in range(num_points):
+    def initialize_centroids(self):
+        initial_indices = np.random.choice(range(len(self.data)), self.k, replace=False)
+        self.centroids = self.data[initial_indices]
+
+    def assign_clusters(self):
+        num_clusters = len(self.centroids)
+        num_points = len(self.data)
+
+        membership = np.zeros((num_points, num_clusters))
+
+        for i in range(num_points):
+            for j in range(num_clusters):
+                num = np.linalg.norm(self.data[i] - self.centroids[j])
+                if num == 0:
+                    membership[i][j] = 1
+                else:
+                    denom = sum(
+                        np.power(num / max(np.linalg.norm(self.data[i] - self.centroids[c]), 1e-10),
+                                 2 / (self.m - 1)) for c in range(num_clusters))
+                    membership[i][j] = 1 / denom
+
+        self.membership = membership
+
+    def update_centroids(self):
+        num_clusters = self.membership.shape[1]
+        num_points = self.membership.shape[0]
+
+        new_centroids = np.zeros((num_clusters, self.data.shape[1]))
+
         for j in range(num_clusters):
-            # Calculate the membership of data point i to cluster j
-            num = np.linalg.norm(data[i] - centroids[j])
+            numerator = sum(np.power(self.membership[i][j], self.m) * self.data[i] for i in range(num_points))
+            denominator = sum(np.power(self.membership[i][j], self.m) for i in range(num_points))
+            new_centroids[j] = numerator / denominator
 
-            # Handle division by zero
-            if num == 0:
-                membership[i][j] = 1
-            else:
-                denom = sum(
-                    np.power(num / max(np.linalg.norm(data[i] - centroids[c]), 1e-10), 2 / (m - 1)) for c in
-                    range(num_clusters))
-                membership[i][j] = 1 / denom
+        if np.linalg.norm(new_centroids - self.centroids) > self.tolerance:
+            self.centroids = new_centroids
 
-    return membership
-
-
-def update_centroids(data: np.ndarray, membership: np.ndarray, m: int) -> np.ndarray:
-    num_clusters = membership.shape[1]
-    num_points = membership.shape[0]
-
-    new_centroids = np.zeros((num_clusters, data.shape[1]))
-
-    for j in range(num_clusters):
-        numerator = sum(np.power(membership[i][j], m) * data[i] for i in range(num_points))
-        denominator = sum(np.power(membership[i][j], m) for i in range(num_points))
-        new_centroids[j] = numerator / denominator
-
-    return new_centroids
-
-
-def fuzzy_c_means(data, k: int, m: int, max_iterations: int = 100, tolerance: float = 1e-4, visualize: bool = False) -> tuple[np.ndarray, np.ndarray]:
-    data = np.array(data)
-    centroids, membership = initialize_centroids(data, k), None
-
-    for _ in range(max_iterations):
-        membership = assign_clusters(data, centroids, m)
-        new_centroids = update_centroids(data, membership, m)
-
-        # sprawdzanie zbieżności starych punktów centralnych z nowymi (optymalizacja)
-        if np.linalg.norm(new_centroids - centroids) < tolerance:
-            break
-
-        centroids = new_centroids
-
-    if visualize:
+    def visualize(self):
         colors = ['r', 'g', 'b', 'c', 'm', 'y']
         plt.figure(figsize=(8, 6))
 
-        for i in range(len(data)):
-            cluster = np.argmax(membership[i])
-            plt.scatter(data[i][0], data[i][1], c=colors[cluster], marker='o')
+        for i in range(len(self.data)):
+            cluster = np.argmax(self.membership[i])
+            plt.scatter(self.data[i][0], self.data[i][1], c=colors[cluster], marker='o')
 
-        for i, centroid in enumerate(centroids):
+        for i, centroid in enumerate(self.centroids):
             cluster_color = colors[i]
             plt.scatter(centroid[0], centroid[1], c=cluster_color, marker='x', label=f'Centroid {i + 1}')
 
@@ -141,29 +159,49 @@ def fuzzy_c_means(data, k: int, m: int, max_iterations: int = 100, tolerance: fl
         plt.legend()
         plt.show()
 
-    return centroids, membership
+    def __call__(self, visualize=False):
+        self.initialize_centroids()
+
+        for _ in range(self.max_iterations):
+            self.assign_clusters()
+            self.update_centroids()
+
+        if visualize:
+            self.visualize()
+
+    def get_centroids(self):
+        return self.centroids
+
+    def get_membership(self):
+        return self.membership
 
 
 def zad1() -> None:
     probki_str = [["1", "a", "2.2"], ["3", "4", "5"]]
     numery_atr = [0, 2]
-    probki_num = probki_str_na_liczby(probki_str, numery_atr)
-    print(probki_num)
+
+    data = Data().probki_str_na_liczby(probki_str, numery_atr)
+    print(data)
 
 
 def zad2() -> None:
-    data = read_data('spiralka.txt')
-    data = probki_str_na_liczby(data, [0, 1])
-    cluster_assignments, centroids = k_means(data, 4, visualize=True)
-    print("Ostateczne punkty centralne:\n", centroids)
+    data = Data()
+    data.read_data('spiralka.txt')
+    data.get_data()
+
+    kmeans = KMeans(data.get_data(), 4)
+    kmeans(visualize=True)
+    print("Ostateczne punkty centralne:\n", kmeans.get_centroids())
 
 
 def zad3() -> None:
-    data = read_data('spiralka.txt')
-    data = probki_str_na_liczby(data, [0, 1])
+    data = Data()
+    data.read_data('spiralka.txt')
+    data.get_data()
 
-    centroids, membership = fuzzy_c_means(data, 3, 2, visualize=True)
-    print("Ostateczne punkty centralne:\n", centroids)
+    fuzzycm = FuzzyCMeans(data.get_data(), 3, 2)
+    fuzzycm(visualize=True)
+    print("Ostateczne punkty centralne:\n", fuzzycm.get_centroids())
 
 
 def main() -> None:

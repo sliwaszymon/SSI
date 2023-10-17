@@ -106,7 +106,7 @@ class MuPlusLambda:
             self.kids = kids
             if visualize and i % what_which == 0:
                 self.visualize(i)
-            elif visualize and i % what_which != 0 and i == self.iterations-1:
+            elif visualize and i % what_which != 0 and i == self.iterations - 1:
                 self.visualize('LAST')
 
             new_parents = self.parents + self.kids
@@ -131,6 +131,40 @@ class MuPlusLambda:
         return np.sin(x1 * 0.05) + np.sin(x2 * 0.05) + 0.4 * np.sin(x1 * 0.15) * np.sin(x2 * 0.15)
 
 
+def function(x1: float | int, x2: float | int) -> float:
+    return np.sin(x1 * 0.05) + np.sin(x2 * 0.05) + 0.4 * np.sin(x1 * 0.15) * np.sin(x2 * 0.15)
+
+
+def euklides(x_1: list[int | float, int | float], x_2: list[int | float, int | float]) -> float:
+    return ((x_2[0] - x_1[0]) ** 2 + (x_2[1] - x_1[1]) ** 2) ** (1/2)
+
+
+def swietliki(n: int, beta_zero: float, gamma_zero: float, mu_zero: float,
+              x_min_i: int | float = 0, x_max_i: int | float = 100, iterations: int = 100) -> tuple:
+
+    gamma = gamma_zero / (x_max_i - x_min_i)
+    mu_i = (x_max_i - x_min_i) * mu_zero
+    xes = np.random.uniform(x_min_i, x_max_i, (n, 2))
+    fs = np.array([function(x[0], x[1]) for x in xes])
+
+    best_point = xes[np.argmax(fs)]
+    best_value = np.max(fs)
+
+    for _ in range(iterations):
+        for a in random.sample(range(0, n), n):
+            for b in random.sample(range(0, n), n):
+                if fs[b] > fs[a]:
+                    beta = beta_zero * np.exp(-gamma * euklides(xes[a], xes[b]) ** 2)
+                    xes[a] += beta * (xes[b] - xes[a])
+            xes[a] += np.random.uniform(-mu_i, mu_i, 2)
+            fs[a] = function(xes[a, 0], xes[a, 1])
+            if fs[a] > best_value:
+                best_point = xes[a]
+                best_value = fs[a]
+
+    return best_point, best_value
+
+
 def zad1() -> None:
     opo = OnePlusOne(10, 1.1, 100)
     opo(visualize=True)
@@ -143,9 +177,15 @@ def zad2() -> None:
     print("Ostateczne najlepszy punkt (x1, x2):\n", mpl.get_best_parent())
 
 
+def zad3() -> None:
+    ans = swietliki(4, 0.3, 0.1, 0.05)
+    print(ans)
+
+
 def main() -> None:
-    zad1()  # 1+1
-    zad2()  # mu+lambda
+    # zad1()  # 1+1
+    # zad2()  # mu+lambda
+    zad3()  # świetliki
 
 
 if __name__ == '__main__':

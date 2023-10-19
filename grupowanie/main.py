@@ -63,6 +63,7 @@ class KMeans:
                         label=f'Cluster {x + 1}')
 
         plt.scatter(self.centroids[:, 0], self.centroids[:, 1], c='red', marker='x', s=100, label='Centroids')
+        plt.title('K-Means Clustering')
         plt.legend()
         plt.show()
 

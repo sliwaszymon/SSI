@@ -19,7 +19,7 @@ class OnePlusOne:
         self.variability = variability
 
     def initialize_values(self) -> None:
-        self.x = random.uniform(self.variability[0], self.variability[1])
+        self.x = np.random.uniform(self.variability[0], self.variability[1])
         self.y = self.function(self.x)
 
     def __call__(self, visualize=False) -> None:
@@ -28,11 +28,11 @@ class OnePlusOne:
         x_pot, y_pot = None, None
         fig, ax = plt.subplots()
         for i in range(self.iterations):
-            x_pot = self.x + random.uniform(-self.dispersion, self.dispersion)
+            x_pot = self.x + np.random.uniform(-self.dispersion, self.dispersion)
             if x_pot < self.variability[0]:
-                x_pot = 0.0
+                x_pot = self.variability[0]
             if x_pot > self.variability[1]:
-                x_pot = 100.0
+                x_pot = self.variability[1]
             y_pot = self.function(x_pot)
             ax.scatter(x_pot, y_pot, s=100, color='b', marker='o')
             print(f'Iteracja: {i}, ({x_pot}, {y_pot})')
@@ -77,13 +77,14 @@ class MuPlusLambda:
         self.variability = variability
 
     def initialize_parents(self) -> None:
-        self.parents = [[random.uniform(self.variability[0], self.variability[1]),
-                         random.uniform(self.variability[0], self.variability[1])] for _ in range(self.mu)]
+        self.parents = [[np.random.uniform(self.variability[0], self.variability[1]),
+                         np.random.uniform(self.variability[0], self.variability[1])] for _ in range(self.mu)]
 
     def visualize(self, iteration: int | str) -> None:
         if iteration == 0:
             iteration = 'INITIAL'
-        x_1, x_2 = np.meshgrid(np.linspace(0, 100, 100), np.linspace(0, 100, 100))
+        x_1, x_2 = np.meshgrid(np.linspace(-25, 125, 400),
+                               np.linspace(-25, 125, 400))
         z = np.sin(x_1 * 0.05) + np.sin(x_2 * 0.05) + 0.4 * np.sin(x_1 * 0.15) * np.sin(x_2 * 0.15)
         plt.figure(figsize=(8, 6))
         contour = plt.contourf(x_1, x_2, z, cmap='viridis')
@@ -131,38 +132,76 @@ class MuPlusLambda:
         return np.sin(x1 * 0.05) + np.sin(x2 * 0.05) + 0.4 * np.sin(x1 * 0.15) * np.sin(x2 * 0.15)
 
 
-def function(x1: float | int, x2: float | int) -> float:
-    return np.sin(x1 * 0.05) + np.sin(x2 * 0.05) + 0.4 * np.sin(x1 * 0.15) * np.sin(x2 * 0.15)
+class Fireflies:
+    N: int
+    beta_zero: float
+    gamma: float
+    mu_i: float
+    iterations: int
+    X: np.ndarray
+    F: np.ndarray
+    best_point: list[list[int | float, int | float], float]
+    x_min_max: tuple[int | float, int | float]
 
+    def __init__(self, N: int, beta_zero: float, gamma_zero: float, mu_zero: float,
+                 x_min_i: int | float = 0, x_max_i: int | float = 100, iterations: int = 30) -> None:
+        self.N = N
+        self.beta_zero = beta_zero
+        self.gamma = gamma_zero / (x_max_i - x_min_i)
+        self.mu_i = (x_max_i - x_min_i) * mu_zero
+        self.iterations = iterations
+        self.X = np.random.uniform(x_min_i, x_max_i, (N, 2))
+        self.F = np.array([self.function(x[0], x[1]) for x in self.X])
+        self.x_min_max = (x_min_i, x_max_i)
+        self.best_point = [self.X[np.argmax(self.F)], np.max(self.F)]
 
-def euklides(x_1: list[int | float, int | float], x_2: list[int | float, int | float]) -> float:
-    return ((x_2[0] - x_1[0]) ** 2 + (x_2[1] - x_1[1]) ** 2) ** (1/2)
+    def update_best_point(self, index: int) -> None:
+        if self.F[index] > self.best_point[1]:
+            self.best_point = [self.X[index], self.F[index]]
 
+    def visualize(self, iteration: int | str):
+        if iteration == 0:
+            iteration = 'INITIAL'
+        x_1, x_2 = np.meshgrid(np.linspace(-self.x_min_max[1]/4, self.x_min_max[1]*1.25, 400),
+                               np.linspace(-self.x_min_max[1]/4, self.x_min_max[1]*1.25, 400))
+        z = np.sin(x_1 * 0.05) + np.sin(x_2 * 0.05) + 0.4 * np.sin(x_1 * 0.15) * np.sin(x_2 * 0.15)
+        plt.figure(figsize=(8, 6))
+        contour = plt.contourf(x_1, x_2, z, cmap='viridis')
+        plt.colorbar(contour)
+        plt.scatter(self.X[:, 0], self.X[:, 1], c='red', marker='o', s=100, label="Points")
+        plt.scatter(*self.best_point[0], c='blue', marker='x', s=150, label="Actual best")
+        plt.title(f'Fireflies iteration {iteration}')
+        plt.legend()
+        plt.show()
 
-def swietliki(n: int, beta_zero: float, gamma_zero: float, mu_zero: float,
-              x_min_i: int | float = 0, x_max_i: int | float = 100, iterations: int = 100) -> tuple:
+    @staticmethod
+    def euclidean_distance(p1: list[float | int], p2: list[float | int]) -> float:
+        if len(p1) != len(p2):
+            raise ValueError("Points must have exact same number of dimensions!")
+        return sum([(x1 - x2) ** 2 for x1, x2 in zip(p1, p2)]) ** .5
 
-    gamma = gamma_zero / (x_max_i - x_min_i)
-    mu_i = (x_max_i - x_min_i) * mu_zero
-    xes = np.random.uniform(x_min_i, x_max_i, (n, 2))
-    fs = np.array([function(x[0], x[1]) for x in xes])
+    @staticmethod
+    def function(x1: float | int, x2: float | int) -> float:
+        return np.sin(x1 * 0.05) + np.sin(x2 * 0.05) + 0.4 * np.sin(x1 * 0.15) * np.sin(x2 * 0.15)
 
-    best_point = xes[np.argmax(fs)]
-    best_value = np.max(fs)
+    def __call__(self, visualize: bool = False, what_which: int = 1) -> None:
+        for i in range(self.iterations):
+            for a in random.sample(range(0, self.N), self.N):
+                for b in random.sample(range(0, self.N), self.N):
+                    if self.F[b] > self.F[a]:
+                        beta = self.beta_zero * np.exp(-self.gamma * self.euclidean_distance(self.X[a], self.X[b]) ** 2)
+                        self.X[a] += beta * (self.X[b] - self.X[a])
+                self.X[a] += np.random.uniform(-self.mu_i, self.mu_i, 2)
+                self.F[a] = self.function(self.X[a, 0], self.X[a, 1])
+                self.update_best_point(a)
 
-    for _ in range(iterations):
-        for a in random.sample(range(0, n), n):
-            for b in random.sample(range(0, n), n):
-                if fs[b] > fs[a]:
-                    beta = beta_zero * np.exp(-gamma * euklides(xes[a], xes[b]) ** 2)
-                    xes[a] += beta * (xes[b] - xes[a])
-            xes[a] += np.random.uniform(-mu_i, mu_i, 2)
-            fs[a] = function(xes[a, 0], xes[a, 1])
-            if fs[a] > best_value:
-                best_point = xes[a]
-                best_value = fs[a]
+            if visualize and i % what_which == 0:
+                self.visualize(i)
+            elif visualize and i % what_which != 0 and i == self.iterations - 1:
+                self.visualize('LAST')
 
-    return best_point, best_value
+    def get_best_point(self) -> list[list[int | float, int | float], float]:
+        return self.best_point
 
 
 def zad1() -> None:
@@ -178,13 +217,14 @@ def zad2() -> None:
 
 
 def zad3() -> None:
-    ans = swietliki(4, 0.3, 0.1, 0.05)
-    print(ans)
+    ff = Fireflies(4, 0.3, 0.1, 0.05, iterations=100)
+    ff(visualize=True, what_which=20)
+    print("Ostateczne najlepszy punkt (x1, x2):\n", ff.get_best_point()[0])
 
 
 def main() -> None:
-    # zad1()  # 1+1
-    # zad2()  # mu+lambda
+    zad1()  # 1+1
+    zad2()  # mu+lambda
     zad3()  # świetliki
 
 

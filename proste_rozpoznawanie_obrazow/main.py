@@ -86,33 +86,39 @@ class GreedyPointMatching:
 
 
 class HopfieldNeuronNetwork:
-    weights: list[list[int]]
+    weights: np.ndarray
     n: int
 
     def __init__(self, n: int) -> None:
         self.n = n
-        self.weights = [[0 for _ in range(n)] for _ in range(n)]
+        self.weights = np.zeros((n*n, n*n))
 
-    def train(self, train_pattern: list[list[int]]) -> None:
-        flat_train_pattern: list[int] = [val for row in train_pattern for val in row]
-        for i in range(len(flat_train_pattern)):
-            for j in range(len(flat_train_pattern)):
+    def train(self, train_pattern: np.ndarray) -> None:
+        flat_train_pattern = train_pattern.flatten()
+        for i in range(self.n ** 2):
+            for j in range(self.n ** 2):
                 if i != j:
-                    self.weights[i % self.n][j % self.n] += (flat_train_pattern[i] * flat_train_pattern[j]) / self.n
+                    self.weights[i, j] += (flat_train_pattern[i] * flat_train_pattern[j]) / (self.n ** 2)
 
-    def denoise_pattern(self, pattern: list[list[int]]) -> list[list[int]]:
-        flat_pattern: list[int] = [val for row in pattern for val in row]
-        for i in range(len(flat_pattern)):
-            suma = 0
-            for j in range((len(flat_pattern))):
-                if i != j:
-                    suma += self.weights[i % self.n][j % self.n] * flat_pattern[j]
-            flat_pattern[i] = 1 if suma >= 0 else -1
-        return [flat_pattern[i:i+self.n] for i in range(0, len(flat_pattern), self.n)]
+    def denoise_pattern(self, pattern: np.ndarray, iterations: int = 10) -> np.ndarray:
+        flat_pattern = pattern.flatten()
+        for _ in range(iterations):
+            for i in range(self.n ** 2):
+                suma = 0
+                for j in range(self.n ** 2):
+                    if i != j:
+                        suma += self.weights[i, j] * flat_pattern[j]
+                flat_pattern[i] = 1 if suma >= 0 else -1
+        return flat_pattern.reshape(self.n, self.n)
 
-    def __call__(self, pattern: list[list[int]], iterations: int = 10):
-        denoised: list[list[int]] = self.denoise_pattern(pattern)
-        print('repaired:', denoised)
+    def __call__(self, pattern: np.ndarray, iterations: int = 10, visualize: bool = False) -> None:
+        denoised: np.ndarray = self.denoise_pattern(pattern, iterations)
+
+        if visualize:
+            plt.imshow(denoised, cmap='Grays')
+            plt.show()
+        else:
+            print('Repaired matrix:', denoised)
 
 
 def zad1() -> None:
@@ -144,30 +150,30 @@ def zad1() -> None:
 
 def zad2() -> None:
     patterns = [
-        [[1, 1, 0, 0, 0], [0, 1, 0, 0, 0], [0, 1, 0, 0, 0], [0, 1, 0, 0, 0], [0, 1, 0, 0, 0]],
-        [[1, 0, 0, 0, 1], [0, 1, 0, 1, 0], [0, 0, 1, 0, 0], [0, 1, 0, 1, 0], [1, 0, 0, 0, 1]],
-        [[0, 0, 1, 0, 0], [0, 0, 1, 0, 0], [1, 1, 1, 1, 1], [0, 0, 1, 0, 0], [0, 0, 1, 0, 0]]
+        np.array([[1, 1, -1, -1, -1], [-1, 1, -1, -1, -1], [-1, 1, -1, -1, -1], [-1, 1, -1, -1, -1], [-1, 1, -1, -1, -1]]),
+        np.array([[1, -1, -1, -1, 1], [-1, 1, -1, 1, -1], [-1, -1, 1, -1, -1], [-1, 1, -1, 1, -1], [1, -1, -1, -1, 1]]),
+        np.array([[-1, -1, 1, -1, -1], [-1, -1, 1, -1, -1], [1, 1, 1, 1, 1], [-1, -1, 1, -1, -1], [-1, -1, 1, -1, -1]])
     ]
 
     tests = [
-        [[0, 1, 0, 0, 0], [0, 1, 0, 0, 0], [0, 1, 0, 0, 0], [0, 1, 0, 0, 0], [0, 1, 0, 0, 0]],
-        [[1, 1, 0, 0, 1], [0, 1, 0, 1, 0], [0, 1, 1, 1, 0], [0, 1, 0, 1, 0], [1, 1, 0, 0, 1]],
-        [[0, 0, 1, 0, 0], [0, 0, 1, 0, 0], [1, 1, 1, 1, 1], [0, 0, 0, 0, 0], [0, 0, 1, 0, 0]],
-        [[0, 1, 1, 1, 1], [1, 0, 1, 1, 1], [1, 0, 1, 1, 1], [1, 0, 1, 1, 1], [1, 0, 1, 1, 1]]
+        np.array([[-1, 1, -1, -1, -1], [-1, 1, -1, -1, -1], [-1, 1, -1, -1, -1], [-1, 1, -1, -1, -1], [-1, 1, -1, -1, -1]]),
+        np.array([[1, 1, -1, -1, 1], [-1, 1, -1, 1, -1], [-1, 1, 1, 1, -1], [-1, 1, -1, 1, -1], [1, 1, -1, -1, 1]]),
+        np.array([[-1, -1, 1, -1, -1], [-1, -1, 1, -1, -1], [1, 1, 1, 1, 1], [-1, -1, -1, -1, -1], [-1, -1, 1, -1, -1]]),
+        np.array([[-1, 1, 1, 1, 1], [1, -1, 1, 1, 1], [1, -1, 1, 1, 1], [1, -1, 1, 1, 1], [1, -1, 1, 1, 1]])
     ]
 
     hnn = HopfieldNeuronNetwork(5)
     for pattern in patterns:
         hnn.train(pattern)
 
-    hnn(tests[0])
-    hnn(tests[1])
-    hnn(tests[2])
-    hnn(tests[3])
+    hnn(tests[0], visualize=True)
+    hnn(tests[1], visualize=True)
+    hnn(tests[2], visualize=True)
+    hnn(tests[3], visualize=True)
 
 
 def main() -> None:
-    # zad1()  # zachłanne dopasowywanie punktów
+    zad1()  # zachłanne dopasowywanie punktów
     zad2()  # sieci hopfielda
 
 

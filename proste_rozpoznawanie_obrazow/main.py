@@ -85,6 +85,36 @@ class GreedyPointMatching:
             print('There must be more test bitmaps otherwise if you have one you know the best one.')
 
 
+class HopfieldNeuronNetwork:
+    weights: list[list[int]]
+    n: int
+
+    def __init__(self, n: int) -> None:
+        self.n = n
+        self.weights = [[0 for _ in range(n)] for _ in range(n)]
+
+    def train(self, train_pattern: list[list[int]]) -> None:
+        flat_train_pattern: list[int] = [val for row in train_pattern for val in row]
+        for i in range(len(flat_train_pattern)):
+            for j in range(len(flat_train_pattern)):
+                if i != j:
+                    self.weights[i % self.n][j % self.n] += (flat_train_pattern[i] * flat_train_pattern[j]) / self.n
+
+    def denoise_pattern(self, pattern: list[list[int]]) -> list[list[int]]:
+        flat_pattern: list[int] = [val for row in pattern for val in row]
+        for i in range(len(flat_pattern)):
+            suma = 0
+            for j in range((len(flat_pattern))):
+                if i != j:
+                    suma += self.weights[i % self.n][j % self.n] * flat_pattern[j]
+            flat_pattern[i] = 1 if suma >= 0 else -1
+        return [flat_pattern[i:i+self.n] for i in range(0, len(flat_pattern), self.n)]
+
+    def __call__(self, pattern: list[list[int]], iterations: int = 10):
+        denoised: list[list[int]] = self.denoise_pattern(pattern)
+        print('repaired:', denoised)
+
+
 def zad1() -> None:
     test1 = [[0, 0, 0, 0], [0, 0, 1, 1], [0, 1, 1, 1], [0, 0, 0, 1], [0, 0, 0, 1]]
     test2 = [[1, 1, 1, 1], [0, 0, 0, 1], [1, 1, 1, 1], [0, 0, 1, 1], [1, 1, 1, 1]]
@@ -112,8 +142,33 @@ def zad1() -> None:
     gpm3()
 
 
+def zad2() -> None:
+    patterns = [
+        [[1, 1, 0, 0, 0], [0, 1, 0, 0, 0], [0, 1, 0, 0, 0], [0, 1, 0, 0, 0], [0, 1, 0, 0, 0]],
+        [[1, 0, 0, 0, 1], [0, 1, 0, 1, 0], [0, 0, 1, 0, 0], [0, 1, 0, 1, 0], [1, 0, 0, 0, 1]],
+        [[0, 0, 1, 0, 0], [0, 0, 1, 0, 0], [1, 1, 1, 1, 1], [0, 0, 1, 0, 0], [0, 0, 1, 0, 0]]
+    ]
+
+    tests = [
+        [[0, 1, 0, 0, 0], [0, 1, 0, 0, 0], [0, 1, 0, 0, 0], [0, 1, 0, 0, 0], [0, 1, 0, 0, 0]],
+        [[1, 1, 0, 0, 1], [0, 1, 0, 1, 0], [0, 1, 1, 1, 0], [0, 1, 0, 1, 0], [1, 1, 0, 0, 1]],
+        [[0, 0, 1, 0, 0], [0, 0, 1, 0, 0], [1, 1, 1, 1, 1], [0, 0, 0, 0, 0], [0, 0, 1, 0, 0]],
+        [[0, 1, 1, 1, 1], [1, 0, 1, 1, 1], [1, 0, 1, 1, 1], [1, 0, 1, 1, 1], [1, 0, 1, 1, 1]]
+    ]
+
+    hnn = HopfieldNeuronNetwork(5)
+    for pattern in patterns:
+        hnn.train(pattern)
+
+    hnn(tests[0])
+    hnn(tests[1])
+    hnn(tests[2])
+    hnn(tests[3])
+
+
 def main() -> None:
-    zad1()  # zachłanne dopasowywanie punktów
+    # zad1()  # zachłanne dopasowywanie punktów
+    zad2()  # sieci hopfielda
 
 
 if __name__ == '__main__':

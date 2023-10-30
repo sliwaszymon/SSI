@@ -63,10 +63,12 @@ class VehicleParameters:
 class FuzzyController:
     simulation_parameters: SimulationParameters
     vehicle: VehicleParameters
+    route: list[list[int, int]]
 
     def __init__(self, simulation_parameters: SimulationParameters, vehicle: VehicleParameters) -> None:
         self.simulation_parameters = simulation_parameters
         self.vehicle = vehicle
+        self.route = [[vehicle.x, vehicle.y]]
 
     def calculate_angle_to_destination(self) -> float:
         destination_x = (self.simulation_parameters.lramp + self.simulation_parameters.rramp) / 2
@@ -102,12 +104,15 @@ class FuzzyController:
         destination = np.array([(self.simulation_parameters.lramp + self.simulation_parameters.rramp) / 2,
                                 self.simulation_parameters.tramp])
 
+        route = np.array(self.route)
+
         vehicle = np.array([self.vehicle.x, self.vehicle.y])
-        m = MarkerStyle(marker='^', transform=Affine2D().rotate_deg(self.vehicle.rotation))
+        m = MarkerStyle(marker='^', transform=Affine2D().rotate_deg(-self.vehicle.rotation))
 
         ax.plot(ramp.T[0], ramp.T[1], color='red', linestyle='dotted')
+        ax.plot(route.T[0], route.T[1], color='green', linestyle='dotted')
         ax.scatter(destination.T[0], destination.T[1], color='blue', marker='s')
-        ax.scatter(vehicle.T[0], vehicle.T[1], color='green', marker=m, s=100)
+        ax.scatter(vehicle.T[0], vehicle.T[1], color='black', marker=m, s=100)
 
         ax.set_xlim(self.simulation_parameters.x_min, self.simulation_parameters.x_max)
         ax.set_ylim(self.simulation_parameters.y_min, self.simulation_parameters.y_max)
@@ -119,43 +124,31 @@ class FuzzyController:
             raise ValueError("Points must have exact same number of dimensions!")
         return sum([(x1 - x2) ** 2 for x1, x2 in zip(p1, p2)]) ** .5
 
-    def __call__(self, visualize: bool = False) -> None:
+    def __call__(self, error: int = 0, visualize: bool = False) -> None:
         destination_x = (self.simulation_parameters.lramp + self.simulation_parameters.rramp) / 2
         destination_y = self.simulation_parameters.tramp
 
-        while not self.vehicle.x == destination_x or not self.vehicle.y == destination_y:
+        while not (destination_x - error <= self.vehicle.x <= destination_x + error
+                   and destination_y - error <= self.vehicle.y <= destination_y + error):
             angle = self.calculate_angle_to_destination()
             rotation = self.takagi_sugeno_driver(angle)
-            self.vehicle.rotation = int(self.vehicle.rotation + rotation)
+            self.vehicle.rotation += int(rotation)
 
-            if self.euclidean_distance([self.vehicle.x, self.vehicle.y], [destination_x, destination_y]) \
-                    > self.simulation_parameters.move_step:
-                if self.vehicle.rotation <= 90:
-                    self.vehicle.x = int(self.vehicle.x + self.simulation_parameters.move_step * math.cos(
-                        math.radians(90 - self.vehicle.rotation)))
-                    self.vehicle.y = int(self.vehicle.y + self.simulation_parameters.move_step * math.sin(
-                        math.radians(90 - self.vehicle.rotation)))
-                if 180 > self.vehicle.rotation >= 90:
-                    self.vehicle.x = int(self.vehicle.x + self.simulation_parameters.move_step * math.cos(
-                        math.radians(self.vehicle.rotation - 90)))
-                    self.vehicle.y = int(self.vehicle.y + self.simulation_parameters.move_step * math.sin(
-                        math.radians(self.vehicle.rotation - 90)))
+            distance_to_destination = self.euclidean_distance([self.vehicle.x, self.vehicle.y],
+                                                              [destination_x, destination_y])
+
+            if distance_to_destination > self.simulation_parameters.move_step:
+                move_distance = self.simulation_parameters.move_step
             else:
-                if self.vehicle.rotation <= 90:
-                    self.vehicle.x = int(self.vehicle.x + math.cos(math.radians(
-                        90 - self.vehicle.rotation)) * self.euclidean_distance(
-                        [self.vehicle.x, self.vehicle.y], [destination_x, destination_y]))
-                    self.vehicle.y = int(self.vehicle.y + math.sin(math.radians(
-                        90 - self.vehicle.rotation)) * self.euclidean_distance(
-                        [self.vehicle.x, self.vehicle.y], [destination_x, destination_y]))
-                if 180 > self.vehicle.rotation >= 90:
-                    self.vehicle.x = int(self.vehicle.x + math.cos(math.radians(
-                        self.vehicle.rotation - 90)) * self.euclidean_distance(
-                        [self.vehicle.x, self.vehicle.y], [destination_x, destination_y]))
-                    self.vehicle.y = int(self.vehicle.y + math.sin(math.radians(
-                        self.vehicle.rotation - 90)) * self.euclidean_distance(
-                        [self.vehicle.x, self.vehicle.y], [destination_x, destination_y]))
-            print(f'Vehicle: (x: {self.vehicle.x}, y: {self.vehicle.y}, rotation: {self.vehicle.rotation})')
+                move_distance = distance_to_destination
+
+            radians = math.radians(
+                90 - self.vehicle.rotation if self.vehicle.rotation <= 90 else self.vehicle.rotation - 90)
+            self.vehicle.x += int(move_distance * math.cos(radians))
+            self.vehicle.y += int(move_distance * math.sin(radians))
+            self.route.append([self.vehicle.x, self.vehicle.y])
+
+            print(f'Vehicle: (x: {self.vehicle.x}, y: {self.vehicle.y})')
             if visualize:
                 self.visualize()
         print('Vehicle reached destination!')
@@ -165,7 +158,7 @@ def zad1() -> None:
     sim_params = SimulationParameters()
     vehicle = VehicleParameters(10, -100, 170)
     fuzzy_controller = FuzzyController(sim_params, vehicle)
-    fuzzy_controller(visualize=True)
+    fuzzy_controller(error=1, visualize=True)
 
 
 def main() -> None:

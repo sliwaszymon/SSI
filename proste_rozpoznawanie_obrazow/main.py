@@ -164,7 +164,6 @@ def zad2() -> None:
     for pattern in patterns:
         hnn.train(pattern)
 
-
     hnn(tests[0], visualize=True)
     hnn(tests[1], visualize=True)
     hnn(tests[2], visualize=True)
@@ -172,7 +171,7 @@ def zad2() -> None:
 
 
 def main() -> None:
-    # zad1()  # zachłanne dopasowywanie punktów
+    zad1()  # zachłanne dopasowywanie punktów
     zad2()  # sieci hopfielda
 
 

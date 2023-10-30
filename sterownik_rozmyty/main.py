@@ -1,4 +1,8 @@
 import matplotlib.pyplot as plt
+from matplotlib.markers import MarkerStyle
+import math
+import numpy as np
+from matplotlib.transforms import Affine2D
 
 
 class SimulationParameters:
@@ -22,7 +26,7 @@ class SimulationParameters:
     move_step: float
 
     def __init__(self, x: tuple[int, int] = (-100, 100), y: tuple[int, int] = (-100, 0),
-                 ramp: tuple[int, int, int, int] = (0, 30, -10, -30), ramp_target_angle: tuple[int, int] =  (-20, 20),
+                 ramp: tuple[int, int, int, int] = (0, 30, -10, -30), ramp_target_angle: tuple[int, int] = (-20, 20),
                  rotation: tuple[int, int] = (-20, 20), angle: tuple[int, int] = (-180, 180), angle_range: int = 360,
                  move_step: float = 5.0) -> None:
         self.x_min = min(x)
@@ -64,11 +68,104 @@ class FuzzyController:
         self.simulation_parameters = simulation_parameters
         self.vehicle = vehicle
 
+    def calculate_angle_to_destination(self) -> float:
+        destination_x = (self.simulation_parameters.lramp + self.simulation_parameters.rramp) / 2
+        destination_y = self.simulation_parameters.tramp
+        dx, dy = destination_x - self.vehicle.x, destination_y - self.vehicle.y
+        angle_radians = math.atan2(dx, dy)
+
+        return math.degrees(angle_radians)
+
+    def takagi_sugeno_driver(self, angle: float) -> float:
+        if angle < self.vehicle.rotation:
+            if (self.vehicle.rotation - angle) >= self.simulation_parameters.rotation_max:
+                return self.simulation_parameters.rotation_min
+            if self.simulation_parameters.rotation_min < (self.vehicle.rotation - angle) \
+                    < self.simulation_parameters.rotation_max:
+                return - (self.vehicle.rotation - angle)
+        if angle > self.vehicle.rotation:
+            if (angle - self.vehicle.rotation) >= self.simulation_parameters.rotation_max:
+                return self.simulation_parameters.rotation_max
+            if self.simulation_parameters.rotation_min < (angle - self.vehicle.rotation) \
+                    < self.simulation_parameters.rotation_max:
+                return angle - self.vehicle.rotation
+        return 0
+
+    def visualize(self) -> None:
+        fig, ax = plt.subplots()
+        ramp = np.array([[self.simulation_parameters.lramp, self.simulation_parameters.tramp],
+                         [self.simulation_parameters.rramp, self.simulation_parameters.tramp],
+                         [self.simulation_parameters.rramp, self.simulation_parameters.bramp],
+                         [self.simulation_parameters.lramp, self.simulation_parameters.bramp],
+                         [self.simulation_parameters.lramp, self.simulation_parameters.tramp]])
+
+        destination = np.array([(self.simulation_parameters.lramp + self.simulation_parameters.rramp) / 2,
+                                self.simulation_parameters.tramp])
+
+        vehicle = np.array([self.vehicle.x, self.vehicle.y])
+        m = MarkerStyle(marker='^', transform=Affine2D().rotate_deg(self.vehicle.rotation))
+
+        ax.plot(ramp.T[0], ramp.T[1], color='red', linestyle='dotted')
+        ax.scatter(destination.T[0], destination.T[1], color='blue', marker='s')
+        ax.scatter(vehicle.T[0], vehicle.T[1], color='green', marker=m, s=100)
+
+        ax.set_xlim(self.simulation_parameters.x_min, self.simulation_parameters.x_max)
+        ax.set_ylim(self.simulation_parameters.y_min, self.simulation_parameters.y_max)
+        plt.show()
+
+    @staticmethod
+    def euclidean_distance(p1: list[float | int], p2: list[float | int]) -> float:
+        if len(p1) != len(p2):
+            raise ValueError("Points must have exact same number of dimensions!")
+        return sum([(x1 - x2) ** 2 for x1, x2 in zip(p1, p2)]) ** .5
+
+    def __call__(self, visualize: bool = False) -> None:
+        destination_x = (self.simulation_parameters.lramp + self.simulation_parameters.rramp) / 2
+        destination_y = self.simulation_parameters.tramp
+
+        while not self.vehicle.x == destination_x or not self.vehicle.y == destination_y:
+            angle = self.calculate_angle_to_destination()
+            rotation = self.takagi_sugeno_driver(angle)
+            self.vehicle.rotation = int(self.vehicle.rotation + rotation)
+
+            if self.euclidean_distance([self.vehicle.x, self.vehicle.y], [destination_x, destination_y]) \
+                    > self.simulation_parameters.move_step:
+                if self.vehicle.rotation <= 90:
+                    self.vehicle.x = int(self.vehicle.x + self.simulation_parameters.move_step * math.cos(
+                        math.radians(90 - self.vehicle.rotation)))
+                    self.vehicle.y = int(self.vehicle.y + self.simulation_parameters.move_step * math.sin(
+                        math.radians(90 - self.vehicle.rotation)))
+                if 180 > self.vehicle.rotation >= 90:
+                    self.vehicle.x = int(self.vehicle.x + self.simulation_parameters.move_step * math.cos(
+                        math.radians(self.vehicle.rotation - 90)))
+                    self.vehicle.y = int(self.vehicle.y + self.simulation_parameters.move_step * math.sin(
+                        math.radians(self.vehicle.rotation - 90)))
+            else:
+                if self.vehicle.rotation <= 90:
+                    self.vehicle.x = int(self.vehicle.x + math.cos(math.radians(
+                        90 - self.vehicle.rotation)) * self.euclidean_distance(
+                        [self.vehicle.x, self.vehicle.y], [destination_x, destination_y]))
+                    self.vehicle.y = int(self.vehicle.y + math.sin(math.radians(
+                        90 - self.vehicle.rotation)) * self.euclidean_distance(
+                        [self.vehicle.x, self.vehicle.y], [destination_x, destination_y]))
+                if 180 > self.vehicle.rotation >= 90:
+                    self.vehicle.x = int(self.vehicle.x + math.cos(math.radians(
+                        self.vehicle.rotation - 90)) * self.euclidean_distance(
+                        [self.vehicle.x, self.vehicle.y], [destination_x, destination_y]))
+                    self.vehicle.y = int(self.vehicle.y + math.sin(math.radians(
+                        self.vehicle.rotation - 90)) * self.euclidean_distance(
+                        [self.vehicle.x, self.vehicle.y], [destination_x, destination_y]))
+            print(f'Vehicle: (x: {self.vehicle.x}, y: {self.vehicle.y}, rotation: {self.vehicle.rotation})')
+            if visualize:
+                self.visualize()
+        print('Vehicle reached destination!')
+
 
 def zad1() -> None:
     sim_params = SimulationParameters()
-    vehicle = VehicleParameters(100, 0, 90)
+    vehicle = VehicleParameters(10, -100, 170)
     fuzzy_controller = FuzzyController(sim_params, vehicle)
+    fuzzy_controller(visualize=True)
 
 
 def main() -> None:
@@ -77,4 +174,3 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
-

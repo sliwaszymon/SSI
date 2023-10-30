@@ -94,28 +94,26 @@ class HopfieldNeuronNetwork:
         self.weights = np.zeros((n*n, n*n))
 
     def train(self, train_pattern: np.ndarray) -> None:
-        flat_train_pattern = train_pattern.flatten()
+        reshaped_train_pattern = train_pattern.reshape(-1, 1)
+        self.weights += np.dot(reshaped_train_pattern, reshaped_train_pattern.T)
+        np.fill_diagonal(self.weights, 0)
+
+    def denoise_pattern(self, pattern: np.ndarray) -> np.ndarray:
+        flat_pattern = pattern.flatten()
         for i in range(self.n ** 2):
+            suma = 0
             for j in range(self.n ** 2):
                 if i != j:
-                    self.weights[i, j] += (flat_train_pattern[i] * flat_train_pattern[j]) / (self.n ** 2)
-
-    def denoise_pattern(self, pattern: np.ndarray, iterations: int = 10) -> np.ndarray:
-        flat_pattern = pattern.flatten()
-        for _ in range(iterations):
-            for i in range(self.n ** 2):
-                suma = 0
-                for j in range(self.n ** 2):
-                    if i != j:
-                        suma += self.weights[i, j] * flat_pattern[j]
-                flat_pattern[i] = 1 if suma >= 0 else -1
+                    suma += self.weights[i, j] * flat_pattern[j]
+            flat_pattern[i] = 1 if suma >= 0 else -1
         return flat_pattern.reshape(self.n, self.n)
 
-    def __call__(self, pattern: np.ndarray, iterations: int = 10, visualize: bool = False) -> None:
-        denoised: np.ndarray = self.denoise_pattern(pattern, iterations)
+    def __call__(self, pattern: np.ndarray, visualize: bool = False) -> None:
+        denoised: np.ndarray = self.denoise_pattern(pattern)
 
         if visualize:
             plt.imshow(denoised, cmap='Grays')
+            plt.title('Naprawiony obraz')
             plt.show()
         else:
             print('Repaired matrix:', denoised)
@@ -166,6 +164,7 @@ def zad2() -> None:
     for pattern in patterns:
         hnn.train(pattern)
 
+
     hnn(tests[0], visualize=True)
     hnn(tests[1], visualize=True)
     hnn(tests[2], visualize=True)
@@ -173,7 +172,7 @@ def zad2() -> None:
 
 
 def main() -> None:
-    zad1()  # zachłanne dopasowywanie punktów
+    # zad1()  # zachłanne dopasowywanie punktów
     zad2()  # sieci hopfielda
 
 
